@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Guilds and Users</title>
+    <style>
+        html, body {
+            background-color: #282b30;
+            color: white;
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+        .flex {
+            display: flex;
+            flex-direction: column;
+        }
+        .flex-row {
+            display: flex;
+            flex-direction: row;
+        }
+        .justify-between{
+            justify-content: space-between;
+        }
+        img {
+            border-radius: 50%;
+        }
+        h1 {
+            align-self: center;
+            margin-bottom: 5px;
+        }
+        h2 {
+            font-size: 20px;
+            margin: 0 10px;
+        }
+        h3 {
+            font-size: 18px;
+            margin: 3px 10px;
+        }
+        ul {
+            margin-top: 0;
+            list-style: none;
+        }
+        a {
+            font-weight: bold;
+            color: #5865F2;
+        }
+        a:visited {
+            text-decoration: none;
+            color: #5865F2;
+        }
+        button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            background-color: #5865F2;
+            border-color: #5865F2;
+            color: white;
+            box-shadow: none;
+            outline: none;
+            margin-bottom: 10px;
+
+        }
+        button:active {
+            border-style: outset;
+        }
+    </style>
+</head>
+<body class="flex">
+    <h1>What discord are the bozos in this time?</h1>
+    <div class="flex" style="align-items: flex-start">
+        <div>
+            <div class="flex-row justify-between">
+                <a href="/">
+                    <button>Everyone</button>
+                </a>
+                <a href="/?only_guildies=true">
+                    <button>Only guildies</button>
+                </a>
+            </div>
+            {{ range $guildIndex, $guild := . }}
+                <div class="flex-row" style="align-items: center">
+                    <img height=32 src="{{ $guild.Icon }}"/> <h2>{{ $guild.Name }}</h2>
+                </div>
+                {{ range $channelIndex, $channel := $guild.Channels }}
+                    <div class="flex-row" style="align-items: center; margin: 10px">
+                        <img height=20 src="/static/voice.png"/>
+                        <h3>{{ $channel.Name }}</h3>
+                        <a href="{{ $channel.URL }}">Join this channel</a></a>
+                    </div>
+                    <ul>
+                        {{ range $userIndex, $user := $channel.Users }}
+                            <li>
+                                <div class="flex-row">
+                                    <img height=20 src="{{ $user.Avatar }}"/>
+                                    <span style="margin-left: 10px; margin-bottom: 5px">{{ $user.GlobalName }} {{ if $user.Nick }} ({{ $user.Nick }}){{ end }}</span>
+                                </div>
+                            </li>
+                        {{ else }}
+                            <li>No users in this channel.</li>
+                        {{ end }}
+                    </ul>
+                {{ else }}
+                    <p>No bozos in this server</p>
+                {{ end }}
+            {{ else }}
+                <p>No guilds available.</p>
+            {{ end }}
+        </div>
+    </div>
+</body>
+</html>
