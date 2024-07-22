@@ -8,13 +8,20 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/hagesjo/godiscord"
 )
 
 type Env struct {
-	Token       string `json:"token"`
-	MainGuildID string `json:"main_guild_id"`
+	Token                    string `json:"token"`
+	MainGuildID              string `json:"main_guild_id"`
+	SelfID                   string `json:"self_id"`
+	PublicApplicationChannel string `json:"public_application_channel"`
+}
+
+func toPtr[T any](t T) *T {
+	return &t
 }
 
 func main() {
@@ -32,6 +39,52 @@ func main() {
 	bot, err := godiscord.NewBot(env.Token, "!")
 	if err != nil {
 		panic(err)
+	}
+
+	if err := bot.RegisterEventListener(func(f *godiscord.Fetcher, de godiscord.MessageCreate) error {
+		c, ok := f.GetChannelByID(de.ChannelID)
+		if !ok {
+			return fmt.Errorf("channel not found")
+		}
+
+		if c.Name == nil || *c.Name != "applications" {
+			return nil
+		}
+
+		// Just for safety, don't want loops - probably overkill
+		if de.Author.ID == env.SelfID {
+			return nil
+		}
+
+		if de.Author.Username != "Appy" {
+			return nil
+		}
+
+		if len(de.Embeds) != 1 {
+			fmt.Printf("got %d embeds\n", len(de.Embeds))
+			return nil
+		}
+
+		content := strings.Split(*de.Message.Embeds[0].Description, "\n\n**")
+		content = append(content[:4], content[5:]...)
+
+		publicChannel, ok := f.GetChannelByName(env.PublicApplicationChannel)
+		if !ok {
+			return fmt.Errorf("public application channel not found")
+		}
+
+		if err := f.SendEmbeds(publicChannel.ID, []godiscord.Embed{
+			{
+				Title:       toPtr("Application received"),
+				Description: toPtr(strings.Join(content, "\n\n**")),
+			},
+		}); err != nil {
+			return fmt.Errorf("failed to send embeds: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		panic(fmt.Sprintf("failed to register event listener: %s", err))
 	}
 
 	go func() {
