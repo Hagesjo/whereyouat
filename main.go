@@ -85,7 +85,8 @@ func main() {
 		}
 
 		nameSplits := strings.Split(content[0], "\n")
-		threadName := nameSplits[len(nameSplits)-1][:15]
+		threadName := nameSplits[len(nameSplits)-1]
+		threadName = threadName[:min(len(threadName), 15)]
 		_, err = f.CreateThread(publicChannel.ID, msg.ID, godiscord.CreateThreadRequest{
 			Name:                threadName,
 			AutoArchiveDuration: toPtr(1440),
