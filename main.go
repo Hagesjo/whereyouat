@@ -87,6 +87,22 @@ func main() {
 		panic(fmt.Sprintf("failed to register event listener: %s", err))
 	}
 
+	if err := bot.RegisterTextCommand("test", func(fetcher *godiscord.Fetcher, args []string, channel godiscord.Channel) error {
+		_, err := fetcher.SendEmbeds(channel.ID, []godiscord.Embed{
+			{
+				Title:       toPtr("ankjaevel's application lol"),
+				Description: toPtr("**Questions**\n**What's your name?**\nglork\n\n**How old are you?**\naoeu\n\n**Where are you from?**\naoeu\n\n**Tell us a little bit about yourself.**\naoeu\n\n**What's your battle tag?**\nueoa\n\n**What's your ingame name?**\naoeu\n\n**What class do you play?**\nuuuu\n\n**What role do you play?**\nDPS\n\n**Link us some logs.**\neeeeeee\n\n**Do you play any alts?**\nooooooo\n\n**What raiding experience do you have?**\naaaaaaaa\n\n**A photo of your combat UI (You can upload an image to discord)**\nooooooo\n\n**Why are you leaving your current guild?**\neeeeeeeee\n\n**Why should we pick you?**\nuuuuuuuuuuu\n\n**Our raid times are Monday and Wednesday, 19.00 till 22.00. Invites roll out at 18.45. Can you make these times?**\nNo"),
+			},
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		return nil
+	}); err != nil {
+		panic(err)
+	}
+
 	go func() {
 		bot.Run()
 	}()
