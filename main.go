@@ -44,14 +44,15 @@ func main() {
 	if err := bot.RegisterEventListener(func(f *godiscord.Fetcher, de godiscord.MessageCreate) error {
 		c, ok := f.GetChannelByID(de.ChannelID)
 		if !ok {
-			return fmt.Errorf("channel not found")
+			// It's probably a thread, ignore.
+			return nil
 		}
 
 		if c.Name == nil || *c.Name != "applications" {
 			return nil
 		}
 
-		// Just for safety, don't want loops - probably overkill
+		// Just for safety, don't want loops - probably overkill.
 		if de.Author.ID == env.SelfID {
 			return nil
 		}
@@ -73,26 +74,20 @@ func main() {
 			return fmt.Errorf("public application channel not found")
 		}
 
-		if err := f.SendEmbeds(publicChannel.ID, []godiscord.Embed{
+		msg, err := f.SendEmbeds(publicChannel.ID, []godiscord.Embed{
 			{
 				Title:       toPtr("Application received"),
 				Description: toPtr(strings.Join(content, "\n\n**")),
 			},
-		}); err != nil {
+		})
+		if err != nil {
 			return fmt.Errorf("failed to send embeds: %w", err)
 		}
 
-		return nil
-	}); err != nil {
-		panic(fmt.Sprintf("failed to register event listener: %s", err))
-	}
-
-	if err := bot.RegisterTextCommand("test", func(fetcher *godiscord.Fetcher, args []string, channel godiscord.Channel) error {
-		_, err := fetcher.SendEmbeds(channel.ID, []godiscord.Embed{
-			{
-				Title:       toPtr("ankjaevel's application lol"),
-				Description: toPtr("**Questions**\n**What's your name?**\nglork\n\n**How old are you?**\naoeu\n\n**Where are you from?**\naoeu\n\n**Tell us a little bit about yourself.**\naoeu\n\n**What's your battle tag?**\nueoa\n\n**What's your ingame name?**\naoeu\n\n**What class do you play?**\nuuuu\n\n**What role do you play?**\nDPS\n\n**Link us some logs.**\neeeeeee\n\n**Do you play any alts?**\nooooooo\n\n**What raiding experience do you have?**\naaaaaaaa\n\n**A photo of your combat UI (You can upload an image to discord)**\nooooooo\n\n**Why are you leaving your current guild?**\neeeeeeeee\n\n**Why should we pick you?**\nuuuuuuuuuuu\n\n**Our raid times are Monday and Wednesday, 19.00 till 22.00. Invites roll out at 18.45. Can you make these times?**\nNo"),
-			},
+		title := *de.Message.Embeds[0].Title // "name's application for Raider Application"
+		_, err = f.CreateThread(publicChannel.ID, msg.ID, godiscord.CreateThreadRequest{
+			Name:                strings.Split(title, "'")[0],
+			AutoArchiveDuration: toPtr(60),
 		})
 		if err != nil {
 			panic(err)
@@ -100,11 +95,13 @@ func main() {
 
 		return nil
 	}); err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to register event listener: %s", err))
 	}
 
 	go func() {
-		bot.Run()
+		if err := bot.Run(); err != nil {
+			panic(err)
+		}
 	}()
 
 	router := http.NewServeMux()
@@ -137,7 +134,7 @@ type Guild struct {
 	Icon     string    `json:"icon,omitempty"`
 	Channels []Channel `json:"channels,omitempty"`
 
-	// To speed up sorting
+	// To speed up sorting.
 	numMembers int
 }
 type Guilds []Guild
@@ -183,7 +180,6 @@ func Index(bot *godiscord.Bot, mainGuildID string) http.HandlerFunc {
 		if err := t.Execute(w, resp); err != nil {
 			return
 		}
-
 	}
 }
 
