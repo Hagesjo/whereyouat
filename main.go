@@ -84,10 +84,11 @@ func main() {
 			return fmt.Errorf("failed to send embeds: %w", err)
 		}
 
-		title := *de.Message.Embeds[0].Title // "name's application for Raider Application"
+		nameSplits := strings.Split(content[0], "\n")
+		threadName := nameSplits[len(nameSplits)-1][:15]
 		_, err = f.CreateThread(publicChannel.ID, msg.ID, godiscord.CreateThreadRequest{
-			Name:                strings.Split(title, "'")[0],
-			AutoArchiveDuration: toPtr(60),
+			Name:                threadName,
+			AutoArchiveDuration: toPtr(1440),
 		})
 		if err != nil {
 			panic(err)
