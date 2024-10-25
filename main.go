@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/hagesjo/godiscord"
 )
@@ -18,6 +20,9 @@ type Env struct {
 	MainGuildID              string `json:"main_guild_id"`
 	SelfID                   string `json:"self_id"`
 	PublicApplicationChannel string `json:"public_application_channel"`
+	WowAHClientID            string `json:"wowah_client_id"`
+	WowAHClientSecret        string `json:"wowah_client_secret"`
+	WowAHTokenChannel        string `json:"wowah_token_channel"`
 }
 
 func toPtr[T any](t T) *T {
@@ -106,6 +111,44 @@ func main() {
 		}
 	}()
 
+	w, err := newWowAH(env.WowAHClientID, env.WowAHClientSecret)
+	if err != nil {
+		log.Fatal(err)
+	}
+	lastToken := WowToken{}
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+
+		for {
+			<-ticker.C //
+			slog.Info("checking token")
+			token, err := w.GetToken()
+			if err != nil {
+				slog.Info("failed to get token: %s", err.Error())
+			}
+			if lastToken.LastUpdatedTimestamp != token.LastUpdatedTimestamp && lastToken.Price != token.Price {
+				diff := (token.Price - lastToken.Price) / 10000
+				diffPrefix := ""
+				if diff > 0 {
+					diffPrefix = "+"
+				}
+
+				var msg string
+				if lastToken.LastUpdatedTimestamp == 0 {
+					msg = fmt.Sprintf("Wow token price: %dg (bot startup)", token.Price/10000)
+				} else {
+					msg = fmt.Sprintf("Wow token price updated: %dg (%s%d)", token.Price/10000, diffPrefix, diff)
+				}
+				if err := bot.SendMessage("Pixelbased Lifeforms", "wow-token", msg); err != nil {
+					slog.Info("failed to send message: %s", err.Error())
+				}
+			} else {
+				slog.Info("no diff")
+			}
+			lastToken = token
+		}
+	}()
+
 	router := http.NewServeMux()
 	router.HandleFunc("GET /", Index(bot, env.MainGuildID))
 	router.HandleFunc("GET /api/v1/guilds/", GetUsers(bot, env.MainGuildID))
@@ -188,7 +231,7 @@ func Index(bot *godiscord.Bot, mainGuildID string) http.HandlerFunc {
 func getData(bot *godiscord.Bot, mainGuildID string, onlyGuildies bool) (Guilds, error) {
 	guildMembersID := make(map[string]bool)
 	if onlyGuildies {
-		mainGuild, err := bot.GetGuild(mainGuildID)
+		mainGuild, err := bot.GetGuildByID(mainGuildID)
 		if err != nil {
 			return Guilds{}, fmt.Errorf("failed to get guild discord: %w", err)
 		}
