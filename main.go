@@ -29,6 +29,38 @@ func toPtr[T any](t T) *T {
 	return &t
 }
 
+var currentBotFormat = `### **1.** What's your name?
+aoeuaoeuaoeuoeuoeuaoeuaoeuaoeu
+### **2.** How old are you?
+aoeu
+### **3.** Where are you from?
+aoeu
+### **4.** Tell us a little bit about yourself.
+aoeu
+### **5.** What's your battle tag?
+aoeu
+### **6.** What's your ingame name?
+aoeuaoeuaoeuoeuoeuaoeuaoeuaoeu
+### **7.** What class do you play?
+aoeu
+### **8.** What role do you play?
+DPS
+### **9.** Link us some logs.
+aoeu
+### **10.** Do you play any alts?
+aoeu
+### **11.** What raiding experience do you have?
+aoeu
+### **12.** A photo of your combat UI (You can upload an image to discord)
+aoeu
+### **13.** Why are you leaving your current guild?
+aoeu
+### **14.** Why should we pick you?
+ueoa
+### **15.** Our raid times are Monday and Wednesday, 19.00 till 22.00 ST. Invites roll out at 18.45.  Can you make these times?
+Yes
+`
+
 func main() {
 	f, err := os.Open("env.json")
 	if err != nil {
@@ -71,8 +103,14 @@ func main() {
 			return nil
 		}
 
-		content := strings.Split(*de.Message.Embeds[0].Description, "\n\n**")
-		content = append(content[:4], content[5:]...)
+		var filteredRows []string
+		for i, r := range strings.Split(*de.Message.Embeds[0].Description, "###") {
+			if i == 5 { // Discord tag
+				continue
+			}
+
+			filteredRows = append(filteredRows, r)
+		}
 
 		publicChannel, ok := f.GetChannelByName(env.PublicApplicationChannel)
 		if !ok {
@@ -82,15 +120,15 @@ func main() {
 		msg, err := f.SendEmbeds(publicChannel.ID, []godiscord.Embed{
 			{
 				Title:       toPtr("Application received"),
-				Description: toPtr(strings.Join(content, "\n\n**")),
+				Description: toPtr(strings.Join(filteredRows, "###")),
 			},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to send embeds: %w", err)
 		}
 
-		nameSplits := strings.Split(content[0], "\n")
-		threadName := nameSplits[len(nameSplits)-1]
+		nameSplits := strings.Split(filteredRows[1], "\n")
+		threadName := nameSplits[1]
 		threadName = threadName[:min(len(threadName), 15)]
 		_, err = f.CreateThread(publicChannel.ID, msg.ID, godiscord.CreateThreadRequest{
 			Name:                threadName,
@@ -157,8 +195,8 @@ func main() {
 	fs := http.FileServer(http.Dir("static"))
 	router.Handle("GET /static/", http.StripPrefix("/static/", fs))
 
-	slog.Info("Serving 8080")
-	http.ListenAndServe(":8080", router)
+	slog.Info("Serving 7778")
+	http.ListenAndServe(":7778", router)
 }
 
 type User struct {
